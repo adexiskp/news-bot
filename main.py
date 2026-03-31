@@ -85,6 +85,9 @@ def get_news():
 schedule.every().day.at("14:20").do(get_news)
 schedule.every().day.at("15:50").do(get_news)
 
+get_news()
+
 while True:
     schedule.run_pending()
     time.sleep(30)
+   
