@@ -2,20 +2,87 @@ import os
 import requests
 import schedule
 import time
+from datetime import datetime
 
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
-def send_news():
-    embed = {
-        "title": "📅 Kalendarz ekonomiczny",
-        "description": "🇺🇸 USD - JOLTS Job Openings\n🔴 WYSOKI WPŁYW",
-        "color": 16711680
-    }
+TLUMACZENIA = {
+    "JOLTS Job Openings": "Liczba ofert pracy JOLTS",
+    "Non Farm Payrolls": "Payrollsy (NFP)",
+    "Consumer Price Index": "Inflacja CPI",
+    "Federal Reserve Interest Rate Decision": "Decyzja stóp procentowych FED",
+    "GDP Growth Rate": "Wzrost PKB",
+    "Unemployment Rate": "Stopa bezrobocia",
+    "Retail Sales": "Sprzedaż detaliczna",
+    "Producer Price Index": "Inflacja PPI",
+    "FOMC Meeting": "Posiedzenie FOMC",
+    "Fed Interest Rate Decision": "Decyzja stóp FED",
+    "Powell Speech": "Wystąpienie Powella"
+}
 
-    requests.post(WEBHOOK_URL, json={"embeds": [embed]})
-    print("Wysłano")
+KLUCZOWE = [
+    "JOLTS",
+    "Payrolls",
+    "CPI",
+    "Fed",
+    "FOMC",
+    "Powell",
+    "Inflation",
+    "Interest Rate"
+]
 
-schedule.every().day.at("01:00").do(send_news)
+def tlumacz_event(nazwa):
+    for ang, pl in TLUMACZENIA.items():
+        if ang.lower() in nazwa.lower():
+            return pl
+    return nazwa
+
+def czy_kluczowy_news(nazwa):
+    for slowo in KLUCZOWE:
+        if slowo.lower() in nazwa.lower():
+            return True
+    return False
+
+def get_news():
+    url = "https://api.tradingeconomics.com/calendar?c=guest:guest&f=json"
+    response = requests.get(url)
+    data = response.json()
+
+    for event in data[:50]:
+        waluta = event.get("Currency", "")
+        waznosc = event.get("Importance", 0)
+        nazwa_raw = event.get("Event", "")
+
+        if waluta == "USD" and waznosc == 3 and czy_kluczowy_news(nazwa_raw):
+            nazwa = tlumacz_event(nazwa_raw)
+
+            czas_raw = event.get("Date", "")
+            try:
+                czas = datetime.fromisoformat(czas_raw.replace("Z", ""))
+                godzina = czas.strftime("%d.%m.%Y • %H:%M")
+            except:
+                godzina = czas_raw
+
+            embed = {
+                "title": "🚨 KLUCZOWY NEWS DLA NASDAQ / GOLD",
+                "description": (
+                    f"📰 **{nazwa}**\n\n"
+                    f"🌍 **Kraj:** USA\n"
+                    f"📊 **Rynek:** NASDAQ / GOLD\n"
+                    f"🕒 **Godzina:** {godzina}\n"
+                    f"🔴 **Wpływ:** Wysoki\n"
+                    f"📈 **Efekt:** Możliwa silna zmienność na US100 i XAUUSD"
+                ),
+                "color": 16753920,
+                "footer": {
+                    "text": "Automatyczny bot newsów • NASDAQ / GOLD"
+                }
+            }
+
+            requests.post(WEBHOOK_URL, json={"embeds": [embed]})
+            print("🚀 Wysłano premium news NASDAQ/GOLD")
+
+schedule.every().day.at("01:00").do(get_news)
 
 while True:
     schedule.run_pending()
