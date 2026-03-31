@@ -79,8 +79,9 @@ def get_news():
                 }
             }
 
-            requests.post(WEBHOOK_URL, json={"embeds": [embed]})
-            print("🚀 Wysłano premium news NASDAQ/GOLD")
+r = requests.post(WEBHOOK_URL, json={"content": "TEST DZIALA 🚀"})
+print("STATUS:", r.status_code)
+print("ODPOWIEDZ:", r.text)
 
 schedule.every().day.at("14:20").do(get_news)
 schedule.every().day.at("15:50").do(get_news)
