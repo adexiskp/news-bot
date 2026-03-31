@@ -87,7 +87,7 @@ schedule.every().day.at("15:50").do(get_news)
 
 print("BOT START")
 get_news()
-PRINT("PO GET_NEWS")
+print("PO GET_NEWS")
 
 while True:
     schedule.run_pending()
