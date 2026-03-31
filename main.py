@@ -79,16 +79,11 @@ def get_news():
                 }
             }
 
-r = requests.post(WEBHOOK_URL, json={"content": "TEST DZIALA 🚀"})
-print("STATUS:", r.status_code)
-print("ODPOWIEDZ:", r.text)
+requests.post(WEBHOOK_URL, json={"embeds": [embed]})
+print("🚀 Wysłano premium news NASDAQ/GOLD")
 
 schedule.every().day.at("14:20").do(get_news)
 schedule.every().day.at("15:50").do(get_news)
-
-print("BOT START")
-get_news()
-print("PO GET_NEWS")
 
 while True:
     schedule.run_pending()
