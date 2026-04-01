@@ -53,7 +53,7 @@ def get_news():
         waznosc = event.get("Importance", 0)
         nazwa_raw = event.get("Event", "")
 
-        if waluta == "USD" and str(waznosc) == "3":
+        if waluta == "USD" 
             nazwa = tlumacz_event(nazwa_raw)
 
             czas_raw = event.get("Date", "")
