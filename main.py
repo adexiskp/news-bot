@@ -12,7 +12,7 @@ def send_news():
     response = requests.get(url)
     data = response.json()
 
-    embeds = []
+    today = datetime.now().strftime("%Y-%m-%d")
 
     for event in data:
         currency = event.get("Currency", "")
@@ -22,41 +22,47 @@ def send_news():
         forecast = event.get("Forecast", "Brak")
         previous = event.get("Previous", "Brak")
 
-        if currency == "USD" and importance == "3":
-            unique_id = f"{title}_{date_raw}"
-            if unique_id in sent_news:
-                continue
+        if currency != "USD":
+            continue
 
-            sent_news.add(unique_id)
+        if importance != "3":
+            continue
 
-            try:
-                dt = datetime.fromisoformat(date_raw.replace("Z", ""))
-                date_txt = dt.strftime("%d %b")
-                hour_txt = dt.strftime("%H:%M")
-            except:
-                date_txt = date_raw
-                hour_txt = "?"
+        if today not in date_raw:
+            continue
 
-            embed = {
-                "title": f"🇺🇸 USD - {title}",
-                "description": (
-                    f"📅 {date_txt}\n"
-                    f"🕒 {hour_txt}\n"
-                    f"🔴 HIGH impact\n\n"
-                    f"**Forecast:** {forecast}\n"
-                    f"**Previous:** {previous}"
-                ),
-                "color": 65280,
-                "footer": {
-                    "text": "Powered by TradingEconomics"
-                }
+        uniqueid = f"{title}{date_raw}"
+        if unique_id in sent_news:
+            continue
+
+        sent_news.add(unique_id)
+
+        try:
+            dt = datetime.fromisoformat(date_raw.replace("Z", ""))
+            date_txt = dt.strftime("%d.%m.%Y")
+            hour_txt = dt.strftime("%H:%M")
+        except:
+            date_txt = date_raw
+            hour_txt = "?"
+
+        embed = {
+            "title": " Kalendarz ekonomiczny",
+            "description": (
+                f" USD - {title}\n"
+                f" {date_txt}\n"
+                f" {hour_txt}\n"
+                f" Wysoki wpływ na rynek\n\n"
+                f" Prognoza: {forecast}\n"
+                f" Poprzedni odczyt: {previous}"
+            ),
+            "color": 16711680,
+            "footer": {
+                "text": "Automatyczne wiadomości • Bot ekonomiczny"
             }
+        }
 
-            embeds.append(embed)
-
-    if embeds:
-        requests.post(WEBHOOK_URL, json={"embeds": embeds[:10]})
-        print("✅ Wysłano newsy")
+        requests.post(WEBHOOK_URL, json={"embeds": [embed]})
+        print(" Wysłano:", title)
 
 schedule.every(5).minutes.do(send_news)
 
