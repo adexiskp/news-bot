@@ -1,92 +1,67 @@
-import os
 import requests
 import schedule
 import time
 from datetime import datetime
 
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+WEBHOOK_URL = "https://discord.com/api/webhooks/1488317285318918164/njcqeAgHoa-Gkce2Sit4FY1F_0CFQkH3-BSAPRrFA2ZrTGuFzhaAgUiKgClLOHJbUCtZ"
 
-TLUMACZENIA = {
-    "JOLTS Job Openings": "Liczba ofert pracy JOLTS",
-    "Non Farm Payrolls": "Payrollsy (NFP)",
-    "Consumer Price Index": "Inflacja CPI",
-    "Federal Reserve Interest Rate Decision": "Decyzja stóp procentowych FED",
-    "GDP Growth Rate": "Wzrost PKB",
-    "Unemployment Rate": "Stopa bezrobocia",
-    "Retail Sales": "Sprzedaż detaliczna",
-    "Producer Price Index": "Inflacja PPI",
-    "FOMC Meeting": "Posiedzenie FOMC",
-    "Fed Interest Rate Decision": "Decyzja stóp FED",
-    "Powell Speech": "Wystąpienie Powella"
-}
+sent_news = set()
 
-KLUCZOWE = [
-    "JOLTS",
-    "Payrolls",
-    "CPI",
-    "Fed",
-    "FOMC",
-    "Powell",
-    "Inflation",
-    "Interest Rate"
-]
-
-def tlumacz_event(nazwa):
-    for ang, pl in TLUMACZENIA.items():
-        if ang.lower() in nazwa.lower():
-            return pl
-    return nazwa
-
-def czy_kluczowy_news(nazwa):
-    for slowo in KLUCZOWE:
-        if slowo.lower() in nazwa.lower():
-            return True
-    return False
-
-def get_news():
+def send_news():
     url = "https://api.tradingeconomics.com/calendar?c=guest:guest&f=json"
     response = requests.get(url)
     data = response.json()
 
-    for event in data[:50]:
-        waluta = event.get("Currency", "")
-        waznosc = event.get("Importance", 0)
-        nazwa_raw = event.get("Event", "")
+    embeds = []
 
-        if waluta == "USD":
-            nazwa = tlumacz_event(nazwa_raw)
+    for event in data:
+        currency = event.get("Currency", "")
+        importance = str(event.get("Importance", ""))
+        title = event.get("Event", "")
+        date_raw = event.get("Date", "")
+        forecast = event.get("Forecast", "Brak")
+        previous = event.get("Previous", "Brak")
 
-            czas_raw = event.get("Date", "")
+        if currency == "USD" and importance == "3":
+            unique_id = f"{title}_{date_raw}"
+            if unique_id in sent_news:
+                continue
+
+            sent_news.add(unique_id)
+
             try:
-                czas = datetime.fromisoformat(czas_raw.replace("Z", ""))
-                godzina = czas.strftime("%d.%m.%Y • %H:%M")
+                dt = datetime.fromisoformat(date_raw.replace("Z", ""))
+                date_txt = dt.strftime("%d %b")
+                hour_txt = dt.strftime("%H:%M")
             except:
-                godzina = czas_raw
+                date_txt = date_raw
+                hour_txt = "?"
 
             embed = {
-                "title": "🚨 KLUCZOWY NEWS DLA NASDAQ / GOLD",
+                "title": f"🇺🇸 USD - {title}",
                 "description": (
-                    f"📰 **{nazwa}**\n\n"
-                    f"🌍 **Kraj:** USA\n"
-                    f"📊 **Rynek:** NASDAQ / GOLD\n"
-                    f"🕒 **Godzina:** {godzina}\n"
-                    f"🔴 **Wpływ:** Wysoki\n"
-                    f"📈 **Efekt:** Możliwa silna zmienność na US100 i XAUUSD"
+                    f"📅 {date_txt}\n"
+                    f"🕒 {hour_txt}\n"
+                    f"🔴 HIGH impact\n\n"
+                    f"**Forecast:** {forecast}\n"
+                    f"**Previous:** {previous}"
                 ),
-                "color": 16753920,
+                "color": 65280,
                 "footer": {
-                    "text": "Automatyczny bot newsów • NASDAQ / GOLD"
+                    "text": "Powered by TradingEconomics"
                 }
             }
 
-            requests.post(WEBHOOK_URL, json={"embeds": [embed]})
-            print("🚀 Wysłano premium news NASDAQ/GOLD")
+            embeds.append(embed)
 
-schedule.every(5).minutes.do(get_news)
+    if embeds:
+        requests.post(WEBHOOK_URL, json={"embeds": embeds[:10]})
+        print("✅ Wysłano newsy")
 
-get_news()
+schedule.every(5).minutes.do(send_news)
+
+send_news()
 
 while True:
     schedule.run_pending()
     time.sleep(30)
-   
