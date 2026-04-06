@@ -6,65 +6,59 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 
 def send_news():
-    try:
-        print("🔍 Sprawdzam newsy...")
+    print("🔍 Sprawdzam newsy...")
 
-        url = (
-            "https://api.tradingeconomics.com/calendar/"
-            "country/united%20states?c=guest:guest&importance=3&f=json"
+    url = (
+        "https://api.tradingeconomics.com/calendar/"
+        "country/united%20states?c=guest:guest&importance=3&f=json"
+    )
+
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+
+    now = datetime.utcnow()
+    next_7d = now + timedelta(days=7)
+
+    sent_any = False
+
+    for event in data:
+        title = event.get("Event", "")
+        date_raw = event.get("Date", "")
+        forecast = event.get("Forecast", "brak")
+        previous = event.get("Previous", "brak")
+
+        try:
+            event_time = datetime.fromisoformat(date_raw.replace("Z", ""))
+        except Exception:
+            continue
+
+        if not (now <= event_time <= next_7d):
+            continue
+
+        embed = {
+            "title": "📢 Nadchodzący ważny news USD",
+            "description": (
+                f"**{title}**\n"
+                f"📅 {event_time.strftime('%d.%m.%Y')}\n"
+                f"🕒 {event_time.strftime('%H:%M')}\n"
+                f"📈 Prognoza: {forecast}\n"
+                f"📉 Poprzedni: {previous}"
+            ),
+        }
+
+        requests.post(
+            WEBHOOK_URL,
+            json={"embeds": [embed]},
+            timeout=10
         )
 
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
+        print("📢 Wysłano:", title)
+        sent_any = True
+        break
 
-        now = datetime.utcnow()
-        next_7d = now + timedelta(days=7)
-
-        sent_any = False
-
-        for event in data:
-            title = event.get("Event", "")
-            date_raw = event.get("Date", "")
-            forecast = event.get("Forecast", "brak")
-            previous = event.get("Previous", "brak")
-
-            try:
-                event_time = datetime.fromisoformat(date_raw.replace("Z", ""))
-            except:
-                continue
-
-            # tylko przyszłe newsy do 7 dni
-            if not (now <= event_time <= next_7d):
-                continue
-
-            embed = {
-                "title": "📢 Nadchodzący ważny news USD",
-                "description": (
-                    f"**{title}**\n"
-                    f"📅 {event_time.strftime('%d.%m.%Y')}\n"
-                    f"🕒 {event_time.strftime('%H:%M')}\n"
-                    f"📈 Prognoza: {forecast}\n"
-                    f"📉 Poprzedni: {previous}"
-                ),
-            }
-
-            requests.post(
-                WEBHOOK_URL,
-                json={"embeds": [embed]},
-                timeout=10
-            )
-
-            print("📢 Wysłano:", title)
-            sent_any = True
-            break
-
-        if not sent_any:
-            print("✅ Brak nowych newsów")
-
-    except Exception as e:
-        print("❌ ERROR:", e)
-        raise
+    if not sent_any:
+        print("✅ Brak nowych newsów")
 
 
 if __name__ == "__main__":
