@@ -3,7 +3,8 @@ import schedule
 import time
 from datetime import datetime, timedelta
 
-WEBHOOK_URL = "https://discord.com/api/webhooks/1488317285318918164/njcqeAgHoa-Gkce2Sit4FY1F_0CFQkH3-BSAPRrFA2ZrTGuFzhaAgUiKgClLOHJbUCtZ"
+import os
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 sent_news = set()
 
