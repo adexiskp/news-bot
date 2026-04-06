@@ -1,12 +1,12 @@
 import os
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 
 def send_news():
-    print("🔍 Sprawdzam newsy...")
+    print("🔍 Pobieram newsy...")
 
     url = (
         "https://api.tradingeconomics.com/calendar/"
@@ -16,9 +16,6 @@ def send_news():
     response = requests.get(url, timeout=10)
     response.raise_for_status()
     data = response.json()
-
-    now = datetime.utcnow()
-    next_7d = now + timedelta(days=7)
 
     opisy = []
     licznik = 0
@@ -36,19 +33,19 @@ def send_news():
 
         try:
             event_time = datetime.fromisoformat(date_raw.replace("Z", ""))
+            data_txt = event_time.strftime("%d.%m.%Y")
+            godzina_txt = event_time.strftime("%H:%M")
         except Exception:
-            continue
-
-        if not (now <= event_time <= next_7d):
-            continue
+            data_txt = "brak"
+            godzina_txt = "brak"
 
         opis = (
             f"📌 **{title}** ({country})\n"
-            f"📅 Data: {event_time.strftime('%d.%m.%Y')}\n"
-            f"🕒 Godzina: {event_time.strftime('%H:%M')}\n"
+            f"📅 Data: {data_txt}\n"
+            f"🕒 Godzina: {godzina_txt}\n"
             f"📈 Prognoza: {forecast}\n"
             f"📉 Poprzedni: {previous}\n"
-            f"🔥 Ważność: {importance}/3\n"
+            f"🔥 Ważność: {importance}/3"
         )
 
         opisy.append(opis)
@@ -58,13 +55,13 @@ def send_news():
             break
 
     if not opisy:
-        print("✅ Brak nowych newsów")
+        print("❌ API nic nie zwróciło")
         return
 
     embed = {
-        "title": "📰 Nadchodzące ważne newsy USD",
+        "title": "📰 Najbliższe ważne newsy",
         "description": "\n\n".join(opisy),
-        "color": 16753920,
+        "color": 16753920
     }
 
     response = requests.post(
@@ -73,7 +70,7 @@ def send_news():
         timeout=10
     )
 
-    print("📢 Wysłano newsy:", response.status_code)
+    print("📢 Discord status:", response.status_code)
 
 
 if __name__ == "__main__":
