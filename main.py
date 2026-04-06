@@ -1,30 +1,58 @@
 import os
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 
 def send_news():
-    print("🔍 Wysyłam przykładowe newsy...")
+    print("🔍 Pobieram newsy...")
 
-    now = datetime.now().strftime("%d.%m.%Y %H:%M")
+    url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+    data = requests.get(url, timeout=20).json()
+
+    now = datetime.utcnow()
+    jutro = now + timedelta(days=1)
+
+    znalezione = []
+
+    for event in data:
+        waluta = event.get("country", "")
+        tytul = event.get("title", "")
+        data_raw = event.get("date", "")
+        impact = event.get("impact", "")
+        forecast = event.get("forecast", "brak")
+        previous = event.get("previous", "brak")
+
+        if waluta not in ["USD", "EUR"]:
+            continue
+
+        if impact != "High":
+            continue
+
+        try:
+            event_time = datetime.fromisoformat(data_raw.replace("Z", ""))
+        except:
+            continue
+
+        if not (now <= event_time <= jutro):
+            continue
+
+        znalezione.append(
+            f"📌 **{waluta} - {tytul}**\n"
+            f"📅 {event_time.strftime('%d.%m.%Y %H:%M')}\n"
+            f"📈 Prognoza: {forecast}\n"
+            f"📉 Poprzedni: {previous}\n"
+            f"🔥 Wpływ: WYSOKI"
+        )
+
+    if not znalezione:
+        print("❌ API nic nie zwróciło")
+        return
 
     embed = {
-        "title": "📰 Aktualizacja newsów ekonomicznych",
-        "description": (
-            f"📌 **USD - Non Farm Payrolls**\n"
-            f"📅 Data: {now}\n"
-            f"📈 Prognoza: 180K\n"
-            f"📉 Poprzedni: 151K\n"
-            f"🔥 Wpływ: WYSOKI\n\n"
-
-            f"📌 **USD - CPI m/m**\n"
-            f"📅 Data: {now}\n"
-            f"📈 Prognoza: 0.3%\n"
-            f"📉 Poprzedni: 0.2%\n"
-            f"🔥 Wpływ: WYSOKI"
-        ),
+        "title": "📰 Najważniejsze newsy ekonomiczne (24h)",
+        "description": "\n\n".join(znalezione[:5]),
         "color": 16711680
     }
 
