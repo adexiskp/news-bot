@@ -1,12 +1,8 @@
+import os
 import requests
-import schedule
-import time
 from datetime import datetime, timedelta
 
-import os
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-
-sent_news = set()
 
 
 def send_news():
@@ -25,8 +21,6 @@ def send_news():
         now = datetime.utcnow()
         next_7d = now + timedelta(days=7)
 
-        found_any = False
-
         for event in data:
             title = event.get("Event", "")
             date_raw = event.get("Date", "")
@@ -38,60 +32,31 @@ def send_news():
             except:
                 continue
 
-            # tylko newsy z najbliższych 7 dni
-           if event_time <= now:
-    continue
-
-            unique_id = f"{title}_{date_raw}"
-
-            if unique_id in sent_news:
+            if not (now <= event_time <= next_7d):
                 continue
-
-            sent_news.add(unique_id)
-            found_any = True
-
-            date_txt = event_time.strftime("%d.%m.%Y")
-            hour_txt = event_time.strftime("%H:%M")
 
             embed = {
                 "title": "📢 Nadchodzący ważny news USD",
                 "description": (
                     f"**{title}**\n"
-                    f"📅 {date_txt}\n"
-                    f"🕒 {hour_txt}\n"
-                    f"🔴 High impact\n\n"
-                    f"📈 **Prognoza:** {forecast}\n"
-                    f"📉 **Poprzedni:** {previous}"
+                    f"📈 Prognoza: {forecast}\n"
+                    f"📉 Poprzedni: {previous}"
                 ),
             }
 
-            try:
-                requests.post(
-                    WEBHOOK_URL,
-                    json={"embeds": [embed]},
-                    timeout=10
-                )
-                print("📢 Wysłano:", title)
-            except Exception as e:
-                print("❌ Błąd wysyłki Discord:", e)
+            requests.post(
+                WEBHOOK_URL,
+                json={"embeds": [embed]},
+                timeout=10
+            )
 
-        if not found_any:
-            print("✅ Brak nowych newsów")
+            print("📢 Wysłano:", title)
+            break
 
     except Exception as e:
-        print("❌ Błąd API:", e)
+        print("❌ ERROR:", e)
+        raise
 
 
-print("🚀 BOT STARTED")
-
-schedule.every(30).minutes.do(send_news)
-
-send_news()
-
-while True:
-    try:
-        schedule.run_pending()
-        time.sleep(30)
-    except Exception as e:
-        print("❌ Błąd pętli:", e)
-        time.sleep(30)
+if __name__ == "__main__":
+    send_news()
