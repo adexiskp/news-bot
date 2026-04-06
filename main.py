@@ -6,7 +6,7 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 
 def send_news():
-    print("🔍 Pobieram newsy...")
+    print("🔍 Pobieram newsy pod NASDAQ i złoto...")
 
     url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
     response = requests.get(url, timeout=20)
@@ -17,6 +17,22 @@ def send_news():
 
     znalezione = []
 
+    slowa_klucz = [
+        "Non Farm",
+        "CPI",
+        "Core CPI",
+        "PPI",
+        "FOMC",
+        "Fed",
+        "Interest Rate",
+        "Powell",
+        "Unemployment",
+        "Retail Sales",
+        "GDP",
+        "ISM",
+        "PMI"
+    ]
+
     for event in data:
         waluta = event.get("country", "")
         tytul = event.get("title", "")
@@ -25,12 +41,16 @@ def send_news():
         forecast = event.get("forecast", "brak")
         previous = event.get("previous", "brak")
 
-        # tylko USD i EUR
-        if waluta not in ["USD", "EUR"]:
+        # tylko USD = NASDAQ + GOLD
+        if waluta != "USD":
             continue
 
-        # tylko high impact
+        # tylko HIGH IMPACT
         if impact != "High":
+            continue
+
+        # tylko najważniejsze newsy
+        if not any(s.lower() in tytul.lower() for s in slowa_klucz):
             continue
 
         try:
@@ -40,7 +60,7 @@ def send_news():
         except Exception:
             continue
 
-        # tylko newsy z 24h
+        # tylko najbliższe 24h
         if not (now <= event_time <= jutro):
             continue
 
@@ -53,13 +73,13 @@ def send_news():
         )
 
     if not znalezione:
-        print("❌ Brak ważnych newsów na 24h")
+        print("❌ Brak ważnych newsów dla NASDAQ/GOLD na 24h")
         return
 
     embed = {
-        "title": "📰 Najważniejsze newsy ekonomiczne (24h)",
+        "title": "📈 NASDAQ + 🥇 GOLD | Najważniejsze newsy (24h)",
         "description": "\n\n".join(znalezione[:5]),
-        "color": 16711680
+        "color": 16766720
     }
 
     response = requests.post(
