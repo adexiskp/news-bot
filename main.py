@@ -21,6 +21,8 @@ def send_news():
         now = datetime.utcnow()
         next_7d = now + timedelta(days=7)
 
+        sent_any = False
+
         for event in data:
             title = event.get("Event", "")
             date_raw = event.get("Date", "")
@@ -32,6 +34,7 @@ def send_news():
             except:
                 continue
 
+            # tylko przyszłe newsy do 7 dni
             if not (now <= event_time <= next_7d):
                 continue
 
@@ -39,6 +42,8 @@ def send_news():
                 "title": "📢 Nadchodzący ważny news USD",
                 "description": (
                     f"**{title}**\n"
+                    f"📅 {event_time.strftime('%d.%m.%Y')}\n"
+                    f"🕒 {event_time.strftime('%H:%M')}\n"
                     f"📈 Prognoza: {forecast}\n"
                     f"📉 Poprzedni: {previous}"
                 ),
@@ -51,7 +56,11 @@ def send_news():
             )
 
             print("📢 Wysłano:", title)
+            sent_any = True
             break
+
+        if not sent_any:
+            print("✅ Brak nowych newsów")
 
     except Exception as e:
         print("❌ ERROR:", e)
