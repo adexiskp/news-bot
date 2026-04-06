@@ -13,7 +13,7 @@ def send_news():
     data = response.json()
 
     now = datetime.utcnow()
-    next_24h = now + timedelta(hours=24)
+    next_7d = now + timedelta(days=7)
 
     for event in data:
         title = event.get("Event", "")
@@ -26,8 +26,8 @@ def send_news():
         except:
             continue
 
-        # tylko eventy z najbliższych 24h
-        if not (now <= event_time <= next_24h):
+        # bierzemy wszystko z najbliższych 7 dni
+        if not (now <= event_time <= next_7d):
             continue
 
         unique_id = f"{title}_{date_raw}"
@@ -40,25 +40,22 @@ def send_news():
         hour_txt = event_time.strftime("%H:%M")
 
         embed = {
-            "title": "📢 Kalendarz ekonomiczny",
+            "title": "📢 Nadchodzący ważny news USD",
             "description": (
-                f"🇺🇸 **USD - {title}**\n"
+                f"🇺🇸 **{title}**\n"
                 f"📅 {date_txt}\n"
                 f"🕒 {hour_txt}\n"
-                f"🔴 Wysoki wpływ na rynek\n\n"
+                f"🔴 High impact\n\n"
                 f"📈 **Prognoza:** {forecast}\n"
-                f"📊 **Poprzedni odczyt:** {previous}"
+                f"📊 **Poprzedni:** {previous}"
             ),
-            "color": 16711680,
-            "footer": {
-                "text": "Automatyczne wiadomości • TradingEconomics"
-            }
+            "color": 16711680
         }
 
         requests.post(WEBHOOK_URL, json={"embeds": [embed]})
         print("✅ Wysłano:", title)
 
-schedule.every(5).minutes.do(send_news)
+schedule.every(30).minutes.do(send_news)
 
 send_news()
 
