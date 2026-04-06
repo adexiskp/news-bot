@@ -38,8 +38,8 @@ def send_news():
                 continue
 
             # tylko newsy z najbliższych 7 dni
-            if not (now <= event_time <= next_7d):
-                continue
+           if event_time <= now:
+    continue
 
             unique_id = f"{title}_{date_raw}"
 
