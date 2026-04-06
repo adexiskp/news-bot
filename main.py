@@ -1,6 +1,6 @@
 import os
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
@@ -9,9 +9,10 @@ def send_news():
     print("🔍 Pobieram newsy...")
 
     url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
-    data = requests.get(url, timeout=20).json()
+    response = requests.get(url, timeout=20)
+    data = response.json()
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     jutro = now + timedelta(days=1)
 
     znalezione = []
@@ -24,30 +25,35 @@ def send_news():
         forecast = event.get("forecast", "brak")
         previous = event.get("previous", "brak")
 
+        # tylko USD i EUR
         if waluta not in ["USD", "EUR"]:
             continue
 
+        # tylko high impact
         if impact != "High":
             continue
 
         try:
-            event_time = datetime.fromisoformat(data_raw.replace("Z", ""))
-        except:
+            event_time = datetime.fromisoformat(
+                data_raw.replace("Z", "+00:00")
+            )
+        except Exception:
             continue
 
+        # tylko newsy z 24h
         if not (now <= event_time <= jutro):
             continue
 
         znalezione.append(
             f"📌 **{waluta} - {tytul}**\n"
-            f"📅 {event_time.strftime('%d.%m.%Y %H:%M')}\n"
+            f"📅 Data: {event_time.strftime('%d.%m.%Y %H:%M')}\n"
             f"📈 Prognoza: {forecast}\n"
             f"📉 Poprzedni: {previous}\n"
             f"🔥 Wpływ: WYSOKI"
         )
 
     if not znalezione:
-        print("❌ API nic nie zwróciło")
+        print("❌ Brak ważnych newsów na 24h")
         return
 
     embed = {
