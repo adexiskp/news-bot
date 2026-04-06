@@ -10,7 +10,7 @@ def send_news():
 
     url = (
         "https://api.tradingeconomics.com/calendar/"
-        "country/united%20states?c=guest:guest&importance=3&f=json"
+        "country/united%20states?c=guest:guest&f=json"
     )
 
     response = requests.get(url, timeout=10)
@@ -20,13 +20,19 @@ def send_news():
     now = datetime.utcnow()
     next_7d = now + timedelta(days=7)
 
-    sent_any = False
+    opisy = []
+    licznik = 0
 
     for event in data:
         title = event.get("Event", "")
+        country = event.get("Country", "")
         date_raw = event.get("Date", "")
         forecast = event.get("Forecast", "brak")
         previous = event.get("Previous", "brak")
+        importance = event.get("Importance", 0)
+
+        if importance < 2:
+            continue
 
         try:
             event_time = datetime.fromisoformat(date_raw.replace("Z", ""))
@@ -36,29 +42,38 @@ def send_news():
         if not (now <= event_time <= next_7d):
             continue
 
-        embed = {
-            "title": "📢 Nadchodzący ważny news USD",
-            "description": (
-                f"**{title}**\n"
-                f"📅 {event_time.strftime('%d.%m.%Y')}\n"
-                f"🕒 {event_time.strftime('%H:%M')}\n"
-                f"📈 Prognoza: {forecast}\n"
-                f"📉 Poprzedni: {previous}"
-            ),
-        }
-
-        requests.post(
-            WEBHOOK_URL,
-            json={"embeds": [embed]},
-            timeout=10
+        opis = (
+            f"📌 **{title}** ({country})\n"
+            f"📅 Data: {event_time.strftime('%d.%m.%Y')}\n"
+            f"🕒 Godzina: {event_time.strftime('%H:%M')}\n"
+            f"📈 Prognoza: {forecast}\n"
+            f"📉 Poprzedni: {previous}\n"
+            f"🔥 Ważność: {importance}/3\n"
         )
 
-        print("📢 Wysłano:", title)
-        sent_any = True
-        break
+        opisy.append(opis)
+        licznik += 1
 
-    if not sent_any:
+        if licznik == 5:
+            break
+
+    if not opisy:
         print("✅ Brak nowych newsów")
+        return
+
+    embed = {
+        "title": "📰 Nadchodzące ważne newsy USD",
+        "description": "\n\n".join(opisy),
+        "color": 16753920,
+    }
+
+    response = requests.post(
+        WEBHOOK_URL,
+        json={"embeds": [embed]},
+        timeout=10
+    )
+
+    print("📢 Wysłano newsy:", response.status_code)
 
 
 if __name__ == "__main__":
